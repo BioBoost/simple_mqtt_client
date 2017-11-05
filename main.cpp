@@ -41,6 +41,7 @@ class SimpleMQTTClient : public virtual mqtt::callback, public virtual mqtt::iac
   private:
     const int	QOS = 1;
     const int	N_RETRY_ATTEMPTS = 5;
+    const int TIMEOUT_SECONDS = 10;
 
   private:
   	int numberOfConnectionRetries;
@@ -52,9 +53,11 @@ class SimpleMQTTClient : public virtual mqtt::callback, public virtual mqtt::iac
     std::string topic;
     IMQTTMessageHandler * messageHandler;
 
-    // Context
+    // Context variables are used to differentiate callback invocations from
+    // one another.
     int connectionContext;
     int subscribeContext;
+    int publishContext;
 
   public:
     SimpleMQTTClient(std::string brokerAddress, std::string clientId);
@@ -62,6 +65,7 @@ class SimpleMQTTClient : public virtual mqtt::callback, public virtual mqtt::iac
 
   public:
     void subscribe(std::string topic, IMQTTMessageHandler * messageHandler);
+    void publish(MQTTMessage message);
 
   public:
   	// Connection callbacks
@@ -113,6 +117,16 @@ void SimpleMQTTClient::subscribe(std::string topic, IMQTTMessageHandler * messag
   }
 }
 
+void SimpleMQTTClient::publish(MQTTMessage message) {
+  mqtt::message_ptr pubmsg = mqtt::make_message(message.get_topic(), message.get_message());
+  pubmsg->set_qos(QOS);
+
+  mqtt::delivery_token_ptr pubtok = client->publish(pubmsg, (void*)(&publishContext), *this);
+	if (!pubtok->wait_for(std::chrono::seconds(TIMEOUT_SECONDS))) {
+    std::cout << "Publish not completed within timeout" << std::endl;
+  }
+}
+
 void SimpleMQTTClient::connect(void) {
 	try {
     std::cout << "Trying to connect to MQTT broker" << std::endl;
@@ -130,6 +144,12 @@ void SimpleMQTTClient::reconnect() {
 }
 
 void SimpleMQTTClient::disconnect(void) {
+	// Double check that there are no pending tokens
+	auto toks = client->get_pending_delivery_tokens();
+	if (!toks.empty()) {
+		std::cout << "Error: There are pending delivery tokens!" << std::endl;
+  }
+
 	try {
 		std::cout << "Disconnecting from the MQTT broker ..." << std::endl;
 		client->disconnect()->wait();
@@ -151,6 +171,13 @@ void SimpleMQTTClient::on_failure(const mqtt::token& tok) {
   	reconnect();
   } else if (tok.get_user_context() == &subscribeContext) {
     std::cout << "Subscription failed for topic " + topic << std::endl;
+  } else if (tok.get_user_context() == &publishContext) {
+		auto top = tok.get_topics();
+		if (top && !top->empty()) {
+      std::cout << "Publish failed for topic " + (*top)[0] << std::endl;
+    } else {
+      std::cout << "Publish failed" << std::endl;
+    }
   }
 }
 
@@ -160,6 +187,13 @@ void SimpleMQTTClient::on_success(const mqtt::token& tok) {
   // the connected() callback that works just fine.
   if (tok.get_user_context() == &subscribeContext) {
     std::cout << "Subscription success for topic " + topic << std::endl;
+  } else if (tok.get_user_context() == &publishContext) {
+		auto top = tok.get_topics();
+		if (top && !top->empty()) {
+      std::cout << "Publish successfull for topic " + (*top)[0] << std::endl;
+    } else {
+      std::cout << "Publish successfull" << std::endl;
+    }
   }
 }
 
@@ -210,6 +244,9 @@ int main(int argc, char* argv[])
 	SimpleMQTTClient simpleClient(SERVER_ADDRESS, CLIENT_ID);
   SomeMessageHandler messageHandler;
   simpleClient.subscribe(TOPIC, &messageHandler);
+  sleep(5);
+  MQTTMessage message(TOPIC, "Hello @ ALL");
+  simpleClient.publish(message);
 
 	// Just block till user tells us to quit.
   std::cout << "Press Q to quit" << std::endl;
