@@ -1,4 +1,5 @@
 #include "../../include/simple_mqtt_client/simple_mqtt_client.h"
+#include <bios_logger/bios_logger.h>
 
 namespace BiosSimpleMqttClient {
 
@@ -27,19 +28,18 @@ namespace BiosSimpleMqttClient {
     this->messageHandler = messageHandler;
 
     if (isConnected) {
-      std::cout << "Subscribing to topic '" << subscriptionTopic << "' using QoS" << QOS << std::endl;
+      BiosLogger::DoLog.info("Subscribing to topic '" + subscriptionTopic + "' using QoS" + std::to_string(QOS));
       client->subscribe(subscriptionTopic, QOS, (void*)(&subscribeContext), *this);
     } else {
-      std::cout << "Cannot subscribe to " << subscriptionTopic << " - client not connected to broker" << std::endl;
+      BiosLogger::DoLog.warning("Cannot subscribe to " + subscriptionTopic + " - client not connected to broker. Will try again on connected");
     }
   }
 
   void SimpleMQTTClient::publish(MQTTMessage message) {
     if (!isConnected) {
-      std::cout << "Cannot publish - not connected to broker" << std::endl;
+      BiosLogger::DoLog.warning("Cannot publish - not connected to broker");
       return;
     }
-
 
     mqtt::message_ptr pubmsg = mqtt::make_message(message.get_topic(), message.get_message());
     pubmsg->set_qos(QOS);
@@ -47,27 +47,27 @@ namespace BiosSimpleMqttClient {
     try {
       mqtt::delivery_token_ptr pubtok = client->publish(pubmsg, (void*)(&publishContext), *this);
     	if (!pubtok->wait_for(std::chrono::seconds(TIMEOUT_SECONDS))) {
-        std::cout << "Publish not completed within timeout" << std::endl;
+        BiosLogger::DoLog.warning("Publish not completed within timeout");
       }
   	}
   	catch (const mqtt::exception& exc) {
-  		std::cout << "Failed to publish mqtt message " << exc.what() << std::endl;
+      BiosLogger::DoLog.error("Failed to publish mqtt message " + std::string(exc.what()));
   	}
   }
 
   void SimpleMQTTClient::connect(void) {
   	try {
-      std::cout << "Trying to connect to MQTT broker" << std::endl;
+      BiosLogger::DoLog.info("Trying to connect to MQTT broker");
   		client->connect(connectionOptions, (void*)(&connectionContext), *this);
   	}
   	catch (const mqtt::exception& exc) {
-  		std::cout << "Connect failed with " << exc.what() << std::endl;
+      BiosLogger::DoLog.error("Connect failed with " + std::string(exc.what()));
   	}
   }
 
   void SimpleMQTTClient::reconnect() {
   	std::this_thread::sleep_for(std::chrono::milliseconds(2500));
-    std::cout << "Reconnecting to MQTT broker" << std::endl;
+    BiosLogger::DoLog.info("Reconnecting to MQTT broker");
   	connect();
   }
 
@@ -75,36 +75,36 @@ namespace BiosSimpleMqttClient {
   	// Double check that there are no pending tokens
   	auto toks = client->get_pending_delivery_tokens();
   	if (!toks.empty()) {
-  		std::cout << "Error: There are pending delivery tokens!" << std::endl;
+      BiosLogger::DoLog.warning("There are pending delivery tokens");
     }
 
   	try {
-  		std::cout << "Disconnecting from the MQTT broker ..." << std::endl;
+      BiosLogger::DoLog.info("Disconnecting from the MQTT broker ...");
   		client->disconnect()->wait();
-  		std::cout << "Disconnected from the MQTT broker" << std::endl;
+      BiosLogger::DoLog.info("Disconnected from the MQTT broker");
       isConnected = false;
   	}
   	catch (const mqtt::exception& exc) {
-  		std::cout << "Disconnect failed with " << exc.what() << std::endl;
+      BiosLogger::DoLog.error("Disconnect failed with " + std::string(exc.what()));
   	}
   }
 
   void SimpleMQTTClient::on_failure(const mqtt::token& tok) {
     if (tok.get_user_context() == &connectionContext) {
-    	std::cout << "Connection attempt to MQTT broker failed" << std::endl;
+      BiosLogger::DoLog.warning("Connection attempt to MQTT broker failed");
       isConnected = false;
     	if (++numberOfConnectionRetries > N_RETRY_ATTEMPTS) {
-    		exit(1);
+    		return;
       }
     	reconnect();
     } else if (tok.get_user_context() == &subscribeContext) {
-      std::cout << "Subscription failed for topic " + subscriptionTopic << std::endl;
+      BiosLogger::DoLog.warning("Subscription failed for topic " + subscriptionTopic);
     } else if (tok.get_user_context() == &publishContext) {
   		auto top = tok.get_topics();
   		if (top && !top->empty()) {
-        std::cout << "Publish failed for topic " + (*top)[0] << std::endl;
+        BiosLogger::DoLog.warning("Publish failed for topic " + (*top)[0]);
       } else {
-        std::cout << "Publish failed" << std::endl;
+        BiosLogger::DoLog.warning("Publish failed");
       }
     }
   }
@@ -114,19 +114,19 @@ namespace BiosSimpleMqttClient {
     // is activated twice for a single connection that is made. Luckely there is
     // the connected() callback that works just fine.
     if (tok.get_user_context() == &subscribeContext) {
-      std::cout << "Subscription success for topic " + subscriptionTopic << std::endl;
+      BiosLogger::DoLog.info("Subscription success for topic " + subscriptionTopic);
     } else if (tok.get_user_context() == &publishContext) {
   		auto top = tok.get_topics();
   		if (top && !top->empty()) {
-        std::cout << "Publish successfull for topic " + (*top)[0] << std::endl;
+        BiosLogger::DoLog.info("Publish successfull for topic " + (*top)[0]);
       } else {
-        std::cout << "Publish successfull" << std::endl;
+        BiosLogger::DoLog.info("Publish successfull");
       }
     }
   }
 
   void SimpleMQTTClient::connected(const std::string& cause) {
-    std::cout << "Connection successfully made to MQTT broker" << std::endl;
+    BiosLogger::DoLog.info("Connection successfully made to MQTT broker");
     isConnected = true;
     if (messageHandler) {
       subscribe(subscriptionTopic, messageHandler);
@@ -134,13 +134,13 @@ namespace BiosSimpleMqttClient {
   }
 
   void SimpleMQTTClient::connection_lost(const std::string& cause) {
-    std::cout << "Connection to MQTT broker lost" << std::endl;
+    BiosLogger::DoLog.warning("Connection to MQTT broker lost");
     isConnected = false;
     if (!cause.empty()) {
-      std::cout << "\tcause: " << cause << std::endl;
+      BiosLogger::DoLog.warning("\tcause: " + cause);
     }
 
-    std::cout << "Reconnecting ..." << std::endl;
+    BiosLogger::DoLog.info("Trying to reconnect to MQTT broker ...");
     numberOfConnectionRetries = 0;
     reconnect();
   }

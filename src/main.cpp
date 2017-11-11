@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
+#include <bios_logger/bios_logger.h>
 
 #include "../include/simple_mqtt_client/simple_mqtt_client.h"
 using namespace BiosSimpleMqttClient;
@@ -20,7 +21,8 @@ const std::string TOPIC("test/hello");
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Sending hello message via MQTT" << std::endl;
+  BiosLogger::DoLog.register_log_writer(new BiosLogger::TerminalLogWriter(BiosLogger::logVERBOSE));
+  BiosLogger::DoLog.info("Sending hello message via MQTT");
 
 	SimpleMQTTClient simpleClient(SERVER_ADDRESS, CLIENT_ID);
   SomeMessageHandler messageHandler;

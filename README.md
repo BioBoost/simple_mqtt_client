@@ -9,3 +9,4 @@ Only limitation is that this client can subscribe to only a single topic.
 ## Dependencies
 
 * [Install PAHO MQTT Libraries](docs/mqtt.md)
+* [BiosLogger](https://github.com/BioBoost/bios_logger)

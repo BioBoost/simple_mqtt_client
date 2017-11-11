@@ -10,7 +10,7 @@ CFLAGS=-c -Wall -std=c++11
 # LDFLAGS=
 
 # Libraries
-LIBS=-lpaho-mqttpp3 -lpaho-mqtt3a -lpthread
+LIBS=-lpaho-mqttpp3 -lpaho-mqtt3a -lpthread -lbioslogger
 
 # Name of executable output
 TARGET=mqtthello
