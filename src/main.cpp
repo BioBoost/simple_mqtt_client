@@ -241,6 +241,7 @@ const std::string TOPIC("test/hello");
 
 int main(int argc, char* argv[])
 {
+  std::cout << "Sending hello message via MQTT" << std::endl;
 	SimpleMQTTClient simpleClient(SERVER_ADDRESS, CLIENT_ID);
   SomeMessageHandler messageHandler;
   simpleClient.subscribe(TOPIC, &messageHandler);
