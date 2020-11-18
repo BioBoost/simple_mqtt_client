@@ -16,7 +16,7 @@ LIBS=-lc -lpaho-mqttpp3 -lpaho-mqtt3a
 NAME=simple_mqtt_client
 LIBRARY=lib$(NAME).so
 TARGET=$(LIBRARY).1
-VERSION=$(LIBRARY).1.0.0
+VERSION=$(LIBRARY).1.1.0
 SRCDIR=src
 BUILDDIR=bin
 
