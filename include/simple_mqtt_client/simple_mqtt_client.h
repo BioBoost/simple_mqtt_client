@@ -32,9 +32,18 @@ namespace BiosSimpleMqttClient {
       int subscribeContext;
       int publishContext;
 
+      // Logging
+      std::ostream * logger;
+      bool usingInternalLogger = false;
+
     public:
       SimpleMQTTClient(std::string brokerAddress, std::string clientId);
+      SimpleMQTTClient(std::string brokerAddress, std::string clientId, std::ostream * logger);
       ~SimpleMQTTClient(void);
+
+    public:
+      void connect(void);
+      void disconnect(void);
 
     public:
       void subscribe(std::string topic, IMQTTMessageHandler * messageHandler);
@@ -54,9 +63,7 @@ namespace BiosSimpleMqttClient {
     	void delivery_complete(mqtt::delivery_token_ptr token) override;
 
     private:
-      void connect(void);
       void reconnect(void);
-      void disconnect(void);
   };
 
 };

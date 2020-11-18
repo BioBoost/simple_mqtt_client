@@ -9,7 +9,7 @@ CFLAGS=-Wall -std=c++11
 # LDFLAGS=
 
 # Libraries
-LIBS=-lsimple_mqtt_client -lbioslogger
+LIBS=-lsimple_mqtt_client
 
 # Sources and executables
 SRCDIR=.

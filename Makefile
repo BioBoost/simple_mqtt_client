@@ -10,7 +10,7 @@ CFLAGS=-c -Wall -std=c++11 -fPIC
 # LDFLAGS=
 
 # Libraries
-LIBS=-lc -lpaho-mqttpp3 -lpaho-mqtt3a -lbioslogger
+LIBS=-lc -lpaho-mqttpp3 -lpaho-mqtt3a
 
 # Name of executable output
 NAME=simple_mqtt_client
