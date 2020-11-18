@@ -12,13 +12,13 @@ Check out the examples subdir.
 
 Making the examples:
 
-```shell
+```bash
 make examples
 ```
 
 You can check your dynamic loaded libraries for the executable:
 
-```shell
+```bash
 ldd <executable>
 .................
 ```
@@ -31,11 +31,17 @@ ldd <executable>
 
 This library can be compiled as a shared library.
 
-Just do the make
+Clone the repository and checkout the lasest version:
 
-```shell
+```bash
 git clone https://github.com/BioBoost/simple_mqtt_client.git
 cd simple_mqtt_client
+git checkout v1.1
+```
+
+Next just do the make
+
+```bash
 make
 sudo make install
 ```
